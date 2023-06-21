@@ -1,11 +1,6 @@
-## My Project
+# EC2 user data for the workshop - Build a SaaS integration for Buy with Prime
 
-TODO: Fill this README out!
-
-Be sure to:
-
-* Change the title in this README
-* Edit your repository description on GitHub
+This repository holds the user data for OAuth handler as part of the demo you can create from [this repository](https://github.com/amzn/buy-with-prime-saas-integration)
 
 ## Security
 
