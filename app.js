@@ -7,9 +7,7 @@ const crypto = require("crypto");
 const bodyParser = require('body-parser');
 require('dotenv').config()
 const AWS = require('aws-sdk');
-AWS.config.update({region:'us-east-1'});
 const docClient = new AWS.DynamoDB.DocumentClient();
-
 const app = express();
 
 app.use(cors({ credentials: true, origin: true }));
@@ -36,13 +34,15 @@ PIBdR7qP73NhRBdNhUNfERayW67OP+ufvhpgdWUcbxXQkos8KkwL8yRMzQ==
 const BWP_AUTHORIZE_URL = "https://console.buywithprime.amazon.com/marketplace/authorize";
 const BWP_TOKEN_URL = "https://api.ais.prod.vinewood.dubai.aws.dev/token";
 
+const TOKEN_STORE_TABLE_NAME = process.env.TOKEN_STORE_TABLE_NAME
+const APP_INSTALL_URL_C = process.env.APP_INSTALL_URL_C
+const APP_INSTALL_URL = APP_INSTALL_URL_C.toLowerCase()  
+
 const CLIENT_ID = process.env.CLIENT_ID
 const CLIENT_SECRET = process.env.CLIENT_SECRET
-const APP_INSTALL_URL = process.env.APP_INSTALL_URL
 
 app.get("/", (req, res) => {
     try {
-        console.log("Access from browser")
         res.send("Answer from web server")
     } catch (err) {
         console.log("Access from browser failed")
@@ -62,10 +62,16 @@ app.get("/hc", (req, res) => {
 })
 // Launch URL
 app.get("/launch", (req, res) => {
-
     let state = Math.random();
-    req.session.state = state; 
-    let redirect_url = `${BWP_AUTHORIZE_URL}?response_type=code&client_id=${CLIENT_ID}&state=${state}&redirect_uri=${encodeURIComponent(APP_INSTALL_URL)}`
+    req.session.state = state;
+    
+    // Generate a unique code verifier for OAuth 2.0 PKCE authentication
+    let codeVerifier = generateCodeVerifire(); 
+    req.session.codeVerifier = codeVerifier
+
+    // Generate a code challenge using code verifier
+    let codeChallenge = generateCodeChallenge(codeVerifier) 
+    let redirect_url = `${BWP_AUTHORIZE_URL}?response_type=code&client_id=${CLIENT_ID}&state=${state}&redirect_uri=${encodeURIComponent(APP_INSTALL_URL)}&code_challenge=${codeChallenge}&code_challenge_method=S256` 
     console.log("/launch")
     console.log("Launch request initiated")
     console.log(redirect_url)
@@ -89,11 +95,13 @@ app.get("/install", (req, res) => {
     }
     
     let authCode = req.query.code;
-    console.log("authCode is ", authCode);
-    
+    let codeVerifier = req.session.codeVerifier;
+
+    console.log("/install - code verifier", codeVerifier)
+
     axios.post(
         BWP_TOKEN_URL,
-        `grant_type=authorization_code&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&redirect_uri=${encodeURIComponent(APP_INSTALL_URL)}&code=${authCode}`,
+        `grant_type=authorization_code&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&redirect_uri=${encodeURIComponent(APP_INSTALL_URL)}&code=${authCode}&code_verifier=${codeVerifier}`,
         {
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -102,7 +110,7 @@ app.get("/install", (req, res) => {
     ).then((response) => {
         console.log(`Auth Token: ${JSON.stringify(response.data)}`);
         let params = {
-            TableName: process.env.TOKEN_STORE_TABLE_NAME,
+            TableName: TOKEN_STORE_TABLE_NAME,
             Item: {
                 installation_id:  installationId,
                 updated_at: Date.now() / 1000,
@@ -184,6 +192,33 @@ function calculateRequestHash(req){
 
     let bodyHash = req.rawBody ? crypto.createHash('sha256').update(req.rawBody, "utf8").digest('hex') : "";
     return crypto.createHash('sha256').update(url + bodyHash, "utf8").digest('hex');
+}
+
+// This function generates a code verifier for OAuth 2.0 PKCE.
+// It creates a random 32-byte value and encodes it in hexadecimal format.
+// The code verifier is used later to generate the code challenge.
+function generateCodeVerifire(){
+    const randomBytes = crypto.randomBytes(32);
+    const verifier = randomBytes.toString('hex');
+    console.log("codeVerifier", verifier)
+
+    return verifier
+}
+
+// This function generates a code challenge from a given code verifier.
+// It hashes the verifier using SHA256 and then encodes the hash in base64 URL format.
+// The code challenge is used in the OAuth 2.0 authorization request.
+function generateCodeChallenge(verifier){
+    console.log("code-verifier before encoding", verifier)
+    const hash = crypto.createHash('sha256').update(verifier).digest();
+    const base64UrlEncoded = hash.toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+
+    console.log("code challenge", base64UrlEncoded)
+
+    return base64UrlEncoded;
 }
 
 
